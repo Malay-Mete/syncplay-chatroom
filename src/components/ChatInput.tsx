@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { useRoom } from '@/contexts/RoomContext';
 import { extractVideoId } from '@/utils/youtube';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatInput: React.FC = () => {
   const { sendMessage, shareVideo } = useRoom();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   // Focus input when component mounts
   useEffect(() => {
@@ -38,6 +40,11 @@ const ChatInput: React.FC = () => {
           
           // Also send the message
           sendMessage(message);
+          
+          toast({
+            title: "Video shared",
+            description: "YouTube video has been shared with everyone in the room.",
+          });
         } else {
           // Not a valid YouTube link, just send as message
           sendMessage(message);
@@ -51,6 +58,11 @@ const ChatInput: React.FC = () => {
       setMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSending(false);
       

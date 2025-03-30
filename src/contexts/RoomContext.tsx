@@ -238,7 +238,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // For demo, we'll use the mockRoom when Supabase is not connected
       // In the final version, this would fetch the room from Supabase
       
-      if (roomId === 'DEMO123') {
+      if (roomId.toUpperCase() === 'DEMO123') {
         // Generate user ID
         const userId = uuidv4();
         
@@ -266,11 +266,44 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: `You've joined ${mockRoom.name}`,
         });
       } else {
-        // In real app, this would search for the room in Supabase
+        // For testing purposes, create a new room if it doesn't exist
+        const newUser: User = {
+          id: uuidv4(),
+          name: userName,
+          isActive: true,
+        };
+        
+        // Create a simple room with the given ID
+        const newRoom: Room = {
+          id: roomId.toUpperCase(),
+          name: `Room ${roomId.toUpperCase()}`,
+          users: [newUser],
+          videoState: {
+            videoId: null, // No video initially
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+            speed: 1,
+            volume: 100,
+            lastUpdated: Date.now(),
+          },
+          messages: [{
+            id: 'welcome',
+            userId: 'system',
+            userName: 'System',
+            content: 'Welcome! Share a YouTube video link to get started.',
+            timestamp: Date.now(),
+            isCommand: false,
+          }],
+          createdAt: Date.now(),
+        };
+        
+        setCurrentUser(newUser);
+        setRoom(newRoom);
+        
         toast({
-          title: "Room Not Found",
-          description: `Room ${roomId} doesn't exist or is no longer available.`,
-          variant: "destructive",
+          title: "Room Created",
+          description: `Created and joined room ${roomId.toUpperCase()}`,
         });
       }
     } catch (error) {
