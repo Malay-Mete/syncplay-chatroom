@@ -104,3 +104,23 @@ export function formatTime(seconds: number): string {
   const remainingSeconds = Math.floor(seconds % 60);
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
+
+/**
+ * Maps YouTube quality labels to readable text
+ */
+export function getQualityLabel(quality: string): string {
+  const qualityMap: Record<string, string> = {
+    'highres': '4K',
+    'hd2160': '4K',
+    'hd1440': '1440p',
+    'hd1080': '1080p',
+    'hd720': '720p',
+    'large': '480p',
+    'medium': '360p',
+    'small': '240p',
+    'tiny': '144p',
+    'auto': 'Auto'
+  };
+
+  return qualityMap[quality] || quality;
+}

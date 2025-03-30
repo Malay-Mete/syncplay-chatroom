@@ -6,8 +6,18 @@ import { useRoom } from '@/contexts/RoomContext';
 import { loadYouTubeAPI, formatTime } from '@/utils/youtube';
 import { 
   Play, Pause, Volume2, VolumeX,
-  SkipBack, SkipForward, Maximize2
+  SkipBack, SkipForward, Maximize2,
+  Settings
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const VideoPlayer: React.FC = () => {
   const { room, updateVideoState } = useRoom();
@@ -19,6 +29,8 @@ const VideoPlayer: React.FC = () => {
   const [prevVolume, setPrevVolume] = useState(100);
   const [isControllingSeek, setIsControllingSeek] = useState(false);
   const [localDuration, setLocalDuration] = useState(0);
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const [currentQuality, setCurrentQuality] = useState<string>('auto');
   
   // Setup YouTube player
   useEffect(() => {
@@ -78,6 +90,13 @@ const VideoPlayer: React.FC = () => {
               if (room.videoState.speed !== 1) {
                 player.setPlaybackRate(room.videoState.speed);
               }
+              
+              // Get available qualities
+              const qualities = player.getAvailableQualityLevels();
+              if (qualities && qualities.length > 0) {
+                setAvailableQualities(['auto', ...qualities]);
+                setCurrentQuality('auto'); // Default to auto
+              }
             },
             onStateChange: (e: any) => {
               if (e.data === window.YT.PlayerState.PLAYING) {
@@ -91,6 +110,9 @@ const VideoPlayer: React.FC = () => {
             onError: (e: any) => {
               console.error('YouTube player error:', e);
             },
+            onPlaybackQualityChange: (e: any) => {
+              setCurrentQuality(e.data);
+            }
           },
         });
       } catch (error) {
@@ -242,6 +264,31 @@ const VideoPlayer: React.FC = () => {
     setLocalTime(newTime);
     updateVideoState({ currentTime: newTime });
   };
+  
+  // Handle quality change
+  const changeQuality = (quality: string) => {
+    if (!playerReady || !playerRef.current) return;
+    
+    playerRef.current.setPlaybackQuality(quality);
+    setCurrentQuality(quality);
+  };
+  
+  // Convert YouTube quality level to readable format
+  const formatQuality = (quality: string): string => {
+    switch (quality) {
+      case 'highres': return '4K';
+      case 'hd2160': return '4K';
+      case 'hd1440': return '1440p';
+      case 'hd1080': return '1080p';
+      case 'hd720': return '720p';
+      case 'large': return '480p';
+      case 'medium': return '360p';
+      case 'small': return '240p';
+      case 'tiny': return '144p';
+      case 'auto': return 'Auto';
+      default: return quality;
+    }
+  };
 
   if (!room?.videoState.videoId) {
     return (
@@ -312,6 +359,32 @@ const VideoPlayer: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Quality Settings Dropdown */}
+            {availableQualities.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20"
+                  >
+                    <Settings size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Video Quality</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={currentQuality} onValueChange={changeQuality}>
+                    {availableQualities.map(quality => (
+                      <DropdownMenuRadioItem key={quality} value={quality}>
+                        {formatQuality(quality)}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          
             {/* Volume control */}
             <div className="flex items-center gap-1">
               <Button
