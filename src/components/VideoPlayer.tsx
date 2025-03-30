@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useRoom } from '@/contexts/RoomContext';
-import { loadYouTubeAPI, formatTime } from '@/utils/youtube';
+import { loadYouTubeAPI, formatTime, getQualityLabel } from '@/utils/youtube';
 import { 
   Play, Pause, Volume2, VolumeX,
   SkipBack, SkipForward, Maximize2,
@@ -31,6 +31,7 @@ const VideoPlayer: React.FC = () => {
   const [localDuration, setLocalDuration] = useState(0);
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
   const [currentQuality, setCurrentQuality] = useState<string>('auto');
+  const [showQualityMenu, setShowQualityMenu] = useState(true); // Always show quality menu
   
   // Setup YouTube player
   useEffect(() => {
@@ -55,7 +56,7 @@ const VideoPlayer: React.FC = () => {
           containerRef.current.appendChild(playerContainer);
         }
         
-        // Initialize player
+        // Initialize player with specific quality options
         playerRef.current = new window.YT.Player('youtube-player', {
           videoId: room.videoState.videoId,
           playerVars: {
@@ -91,12 +92,20 @@ const VideoPlayer: React.FC = () => {
                 player.setPlaybackRate(room.videoState.speed);
               }
               
-              // Get available qualities
+              // Get available qualities and set default qualities if API doesn't return any
               const qualities = player.getAvailableQualityLevels();
+              console.log("Available qualities:", qualities);
+              
               if (qualities && qualities.length > 0) {
                 setAvailableQualities(['auto', ...qualities]);
-                setCurrentQuality('auto'); // Default to auto
+              } else {
+                // Set default qualities if none are returned
+                setAvailableQualities([
+                  'auto', 'highres', 'hd1080', 'hd720', 'large', 'medium', 'small'
+                ]);
               }
+              
+              setCurrentQuality('auto'); // Default to auto
             },
             onStateChange: (e: any) => {
               if (e.data === window.YT.PlayerState.PLAYING) {
@@ -111,7 +120,8 @@ const VideoPlayer: React.FC = () => {
               console.error('YouTube player error:', e);
             },
             onPlaybackQualityChange: (e: any) => {
-              setCurrentQuality(e.data);
+              console.log("Quality changed to:", e.data);
+              setCurrentQuality(e.data || 'auto');
             }
           },
         });
@@ -268,26 +278,9 @@ const VideoPlayer: React.FC = () => {
   // Handle quality change
   const changeQuality = (quality: string) => {
     if (!playerReady || !playerRef.current) return;
-    
+    console.log("Setting quality to:", quality);
     playerRef.current.setPlaybackQuality(quality);
     setCurrentQuality(quality);
-  };
-  
-  // Convert YouTube quality level to readable format
-  const formatQuality = (quality: string): string => {
-    switch (quality) {
-      case 'highres': return '4K';
-      case 'hd2160': return '4K';
-      case 'hd1440': return '1440p';
-      case 'hd1080': return '1080p';
-      case 'hd720': return '720p';
-      case 'large': return '480p';
-      case 'medium': return '360p';
-      case 'small': return '240p';
-      case 'tiny': return '144p';
-      case 'auto': return 'Auto';
-      default: return quality;
-    }
   };
 
   if (!room?.videoState.videoId) {
@@ -359,31 +352,29 @@ const VideoPlayer: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Quality Settings Dropdown */}
-            {availableQualities.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-white hover:bg-white/20"
-                  >
-                    <Settings size={16} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Video Quality</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup value={currentQuality} onValueChange={changeQuality}>
-                    {availableQualities.map(quality => (
-                      <DropdownMenuRadioItem key={quality} value={quality}>
-                        {formatQuality(quality)}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            {/* Quality Settings Dropdown - Force shown regardless of availableQualities */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                >
+                  <Settings size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-black/90 border-gray-700 text-white">
+                <DropdownMenuLabel>Video Quality</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuRadioGroup value={currentQuality} onValueChange={changeQuality}>
+                  {availableQualities.map(quality => (
+                    <DropdownMenuRadioItem key={quality} value={quality} className="text-white focus:bg-white/20 focus:text-white">
+                      {getQualityLabel(quality)}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           
             {/* Volume control */}
             <div className="flex items-center gap-1">
